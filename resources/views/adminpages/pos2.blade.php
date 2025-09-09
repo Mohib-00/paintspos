@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+   @include('adminpages.css')
+   <style>
+    .modal-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        width: 100%;
+        max-width: 800px; 
+        animation: slideDown 0.5s ease;
+    }
+
+    .modal-dialog {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    @media (max-width: 767px) {
+        .modal-dialog {
+            max-width: 90%; 
+        }
+
+        .modal-content {
+            padding: 15px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .modal-content {
+            padding: 10px;
+        }
+    }
+
+  
+</style>
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+    @include('adminpages.sidebar')
+
+      <div class="main-panel">
+        @include('adminpages.header')
+
+        <div class="container">
+            <div class="page-inner">
+             
+              <form id="saleForm">
+                <div class="row">
+                    <div class="col-md-12">
+                      <div class="card card-round">
+                        <div class="card-header">
+                          <div class="row">
+                            <!-- Clients Form -->
+                            <div class="col-12 col-md-2 mb-3">
+                              <label for="customerSelect">Choose Employee</label>
+                              <select class="form-select form-select-sm" id="customerSelect" name="employee">
+                                <option value="1">All</option>
+                                @foreach ($users as $user)
+                                  <option value="{{ $user->name }}">{{ $user->name }}</option>
+                                @endforeach
+                              </select>
+                            </div>
+                  
+                            <!-- Choose a Customer -->
+                            <div class="col-12 col-md-6 mb-3">
+                              <label for="smallSelect">Choose a Customer</label>
+                              <select class="form-select form-select-sm" id="smallSelect" name="customer_name">
+                                <option value="1">All</option>
+                                @foreach ($customers as $customer)
+                                  <option value="{{ $customer->id }}">{{ $customer->customer_name }}</option>
+                                @endforeach
+                              </select>
+                            </div>
+                  
+                           @php
+                           $today = \Carbon\Carbon::today()->toDateString();
+                           $yesterday = \Carbon\Carbon::yesterday()->toDateString();
+                           @endphp
+
+                          @if(auth()->user()->pos_pastdate == '1')
+                          <div class="col-12 col-md-2 mb-3">
+                          <label for="dateInput">Date</label>
+                          <input class="form-control form-control-sm" type="date" name="created_at" id="dateInput" />
+                          </div>
+                          @elseif(auth()->user()->pos_pastdate == '0')
+                          <div class="col-12 col-md-2 mb-3">
+                          <label for="dateInput">Date</label>
+                          <input class="form-control form-control-sm" type="date" name="created_at" id="dateInput" min="{{ $yesterday }}" max="{{ $today }}" />
+                          </div>
+                          @endif
+
+                            <div class="col-12 col-md-2 mb-3">
+                              <label for="refInput">Ref#</label>
+                              <input class="form-control form-control-sm" type="text" name="ref" id="refInput"/>
+                            </div>
+
+                        <div class="col-lg-8 col-md-12 mb-3">
+                          <div class="dropdown">
+                            <button class="btn" type="button" id="productSearchDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid #eff0f3;width: 100%;text-align: left;padding-left: 0.5rem;padding-right: 2rem;position: relative;">
+                              Search Item
+                            <span style="position: absolute;right: 0.5rem;top: 50%;transform: translateY(-50%);pointer-events: none;">
+                              ▼
+                            </span>
+                            </button>
+
+                            <ul class="dropdown-menu" id="productDropdownMenu" style="width: 100%; max-height: 300px; overflow-y: auto;">
+                            <li class="px-2">
+                            <input type="text" class="form-control" id="productSearchInput" placeholder="Search..." onkeyup="filterDropdownItems()" autocomplete="off"/>
+                            </li>
+                            <li><hr class="dropdown-divider" /></li>
+      
+                            @foreach ($products as $product)
+                            <li class="product-item">
+                            <a class="dropdown-item" href="#" onclick="selectProduct('{{ $product->id }}', '{{ $product->item_name }}'); return false;">
+                            {{ $product->item_name }}
+                            </a>
+                            </li>
+                            <li><hr class="dropdown-divider" /></li>
+                            @endforeach
+
+                             @foreach ($deals as $deal)
+                            <li class="product-item">
+                            <a class="dropdown-item" href="#" onclick="selectProduct('{{ $deal->id }}', '{{ $deal->deal_name }}'); return false;">
+                            {{ $deal->deal_name }}
+                            </a>
+                            </li>
+                            <li><hr class="dropdown-divider" /></li>
+                            @endforeach
+                            </ul>
+                            <input type="hidden" id="selectedProductId" />
+                          </div>
+                        </div>
+                            <div class="col-lg-2 col-md-12 mb-3 d-flex align-items-center">
+                              <label style="white-space: nowrap" class="me-2 mb-0">Product Name:</label>
+                              <input class="form-control form-control-sm" type="text" id="productName" readonly/>
+                            </div>
+                            
+                            <div class="col-lg-2 col-md-12 mb-3 d-flex align-items-center">
+                              <label style="white-space: nowrap" class="me-2 mb-0">Product Quantity:</label>
+                              <input class="form-control form-control-sm" type="text" id="qty" readonly/> 
+                            </div>
+                            
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                
+                  <div class="row">
+
+                    <div class="col-md-9">
+                      <div class="card card-round">
+                        <div class="card-header">
+                          <div class="card-head-row card-tools-still-right">
+                          </div>
+                        </div>
+                        <div class="card-body p-0">
+                          <div class="table-responsive">
+                            <table class="table align-items-center mb-0" id="productTable">
+                              <thead class="thead-light">
+                                <tr>
+                                  <th scope="col">Name</th>
+                                  <th scope="col">Quantity</th>
+                                  <th style="display: none" scope="col">Purchase Rate</th>
+                                  <th scope="col">Retail Rate</th>
+                                  <th scope="col">Sub-Total</th>
+                                  <th scope="col">Delete</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                              </tbody>
+                              <tfoot>
+                                <tr>
+                                  <td colspan="3" class="text-end fw-bold">Total Items</td>
+                                  <td class=" fw-bold" >
+                                    <input type="number" id="totalItems"  name="total_items" class="form-control form-control-sm text-end fw-bold" style="width: fit-content" readonly>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td colspan="3" class="text-end fw-bold">Total</td>
+                                  <td class=" fw-bold" >
+                                    <input type="number" id="totalAmount" name="total" class="form-control form-control-sm text-end fw-bold" style="width: fit-content;" readonly>
+
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                            
+                          </div>
+                        </div>
+                      </div>
+
+                       <div class="card card-round dealitemsection" style="display: none">
+                        <div class="card-header">
+                          <div class="card-head-row card-tools-still-right">
+                          </div>
+                        </div>
+                        <div class="card-body p-0">
+                          <div class="table-responsive">
+                            <table class="table align-items-center mb-0" id="dealitemTable">
+                              <thead class="thead-light">
+                                <tr>
+                                  <th scope="col">Deal Name</th>
+                                  <th scope="col">Name</th>
+                                  <th scope="col">Quantity</th>
+                                  <th style="display: none" scope="col">P.Rate</th>
+                                  <th scope="col">R.Rate</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                              </tbody>
+                               
+                            </table>
+                            
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  
+                    <!-- Right Side Panel -->
+                    <div class="col-md-3">
+                      <div class="card card-round shadow-sm">
+                        <div class="card-body">
+                    
+                          <!-- Sale Type Section -->
+                          <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="fw-bold" style="font-size: 16px;">Sale Type</div>
+                            <select class="form-select form-select-sm flex-grow-1 ms-2" name="sale_type" id="saleTypeSelect" style="min-width: 100px; max-width: 180px; border-radius: 8px;">
+                              <option value="1">Cash</option>
+                              <option value="2">Credit</option>
+                            </select>
+                          </div>
+                    
+                          <!-- Payment Type Section -->
+                          <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="fw-bold" style="font-size: 16px;">Payment Type</div>
+                            <select class="form-select form-select-sm flex-grow-1 ms-2" name="payment_type" id="paymentTypeSelect" style="min-width: 100px; max-width: 180px; border-radius: 8px;">
+                              <option value="1">Cash</option>
+                              <option value="2">Bank</option>
+                            </select>
+                          </div>
+                    
+                          <hr>
+                    
+                          <!-- Discount Section -->
+                          <div class="d-flex justify-content-between align-items-center py-2">
+                            <div class="fw-bold" style="font-size: 16px;">Discount</div>
+                            <input class="form-control form-control-sm flex-grow-1 ms-2" type="text" name="discount" id="discount" value="0" style="min-width: 100px; max-width: 180px; border-radius: 8px;" />
+                          </div>
+                    
+                          <!-- Amount After Discount Section -->
+                          <div class="d-flex justify-content-between align-items-center py-2">
+                            <div class="fw-bold" style="font-size: 16px;">Amount After Discount</div>
+                            <input class="form-control form-control-sm flex-grow-1 ms-2" type="number" name="amount_after_discount" id="amountafterdiscount" value="0" style="min-width: 100px; max-width: 180px; border-radius: 8px;" readonly />
+                          </div>
+                    
+                          <hr>
+                    
+                          <!-- Fixed Discount Section -->
+                          <div class="d-flex justify-content-between align-items-center py-2">
+                            <div class="fw-bold" style="font-size: 16px;">Fixed Discount</div>
+                            <input class="form-control form-control-sm flex-grow-1 ms-2" type="number" name="fixed_discount" id="fixeddiscount" value="0" style="min-width: 100px; max-width: 180px; border-radius: 8px;" readonly />
+                          </div>
+                    
+                          <!-- Amount After Fixed Discount Section -->
+                          <div class="d-flex justify-content-between align-items-center py-2">
+                            <div class="fw-bold" style="font-size: 16px;">Amount After Fix-Discount</div>
+                            <input class="form-control form-control-sm flex-grow-1 ms-2" type="number" name="amount_after_fix_discount" id="amountafterfixdiscount" value="0" style="min-width: 100px; max-width: 180px; border-radius: 8px;" readonly />
+                          </div>
+                    
+                          <hr>
+                    
+                          <!-- Total Rs Section -->
+                          <div class="d-flex justify-content-between align-items-center py-2">
+                            <div class="fw-bold" style="font-size: 16px;">Total Rs:</div>
+                            <input class="form-control form-control-sm flex-grow-1 ms-2" type="number" name="subtotal" id="total" value="0" style="min-width: 100px; max-width: 180px; border-radius: 8px;" readonly />
+                          </div>
+                    
+                          <hr>
+                    
+                          <!-- Submit Button -->
+                          <div class="d-flex justify-content-center mt-3">
+                            <button type="submit" class="btn btn-primary w-100" style="border-radius: 8px;">Submit</button>
+                          </div>
+                    
+                        </div>
+                      </div>
+                    </div>
+                  <input type="text" id="barcodeInput" placeholder="Scan barcode" style="position:absolute; left:-9999px;" onkeydown="handleBarcodeScan(event)">
+
+                  </div>
+              </form>
+                  
+              </div>
+        </div>
+
+        @include('adminpages.footer')
+      </div>
+    </div>
+
+    
+
+
+
+    @include('adminpages.js')
+    @include('adminpages.ajax')
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dropdown = document.getElementById('productDropdownMenu');
+        const searchInput = document.getElementById('productSearchInput');
+
+        document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(trigger => {
+            trigger.addEventListener('shown.bs.dropdown', function () {
+                setTimeout(() => searchInput.focus(), 100);
+            });
+        });
+    });
+</script>
+
+
+
+    <script>
+      $('#customerSelect').on('change', function () {
+  var userName = $(this).val();
+
+  $.ajax({
+    url: '/get-customers-by-username/' + userName,
+    type: 'GET',
+    success: function (response) {
+      var customers = response.customers;
+
+      var $select = $('#smallSelect');
+      $select.empty();
+      $select.append('<option value="1">All</option>');
+
+      customers.forEach(function (customer) {
+        $select.append(`<option value="${customer.id}">${customer.customer_name}</option>`);
+      });
+
+      $('#fixeddiscount').val('');
+      $('#fixedDiscountSection').hide();
+    },
+    error: function (xhr) {
+      console.error('Error fetching customers:', xhr);
+    }
+  });
+});
+
+
+$('#smallSelect').on('change', function () {
+  var customerId = $(this).val();
+
+  if (customerId !== '1') {
+    $.ajax({
+      url: '/get-customer-discount/' + customerId,
+      type: 'GET',
+      success: function (response) {
+        if (response.fixed_discount !== null) {
+          $('#fixeddiscount').val(response.fixed_discount); 
+          $('#fixedDiscountSection').show();
+        } else {
+          $('#fixeddiscount').val('');
+          $('#fixedDiscountSection').hide();
+        }
+
+        updateTotals();
+      },
+      error: function (xhr) {
+        console.error('Error fetching discount:', xhr);
+      }
+    });
+  } else {
+    $('#fixeddiscount').val('');
+    $('#fixedDiscountSection').hide();
+    updateTotals(); 
+  }
+});
+
+
+
+function updateTotals() {
+  let totalItems = 0;
+  let totalAmount = 0;
+
+  $('#productTable tbody tr').each(function (index) {
+    const qtyInput = $(this).find('.quantity-input, .deal-quantity-input');
+    const quantity = parseInt(qtyInput.val()) || 0;
+
+    const subtotalRaw = $(this).find('.subtotal-input').val() || '0';
+    const subtotal = parseFloat(subtotalRaw.replace(/,/g, ''));
+
+    console.log(`Row ${index + 1} subtotal:`, subtotal);
+
+    totalItems += quantity; 
+    totalAmount += subtotal;
+  });
+
+  $('#totalItems').val(totalItems); 
+  $('#totalAmount').val(totalAmount.toFixed(2));
+
+  const discount = parseFloat($('#discount').val()) || 0;
+  const fixedDiscount = parseFloat($('#fixeddiscount').val()) || 0;
+
+  const amountAfterDiscount = totalAmount - discount;
+  $('#amountafterdiscount').val(amountAfterDiscount.toFixed(2));
+
+  const amountAfterFixDiscount = amountAfterDiscount - fixedDiscount;
+  $('#amountafterfixdiscount').val(amountAfterFixDiscount.toFixed(2));
+
+  $('#total').val(amountAfterFixDiscount.toFixed(2));
+}
+
+
+
+    </script>
+    
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const barcodeInput = document.getElementById("barcodeInput");
+
+  barcodeInput.focus();
+
+  document.addEventListener("click", (e) => {
+    if (!['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
+      barcodeInput.focus();
+    }
+  });
+
+  barcodeInput.addEventListener("keydown", handleBarcodeScan);
+});
+
+function handleBarcodeScan(e) {
+  if (e.key === "Enter") {
+    e.preventDefault(); 
+
+    const barcode = e.target.value.trim();
+    if (barcode) {
+      fetchProductByBarcode(barcode);
+      e.target.value = ""; 
+    }
+  }
+}
+
+function fetchProductByBarcode(barcode) {
+  fetch(`/get-product-by-barcode/${barcode}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        selectProduct(data.product.id, data.product.item_name);
+      } else {
+        alert("Product not found.");
+      }
+    })
+    .catch(error => {
+      console.error('Fetch error:', error);
+    });
+}
+</script>
+
+
+
+
+
+
+<script>
+ function filterDropdownItems() {
+  const input = document.getElementById("productSearchInput");
+  const filter = input.value.toLowerCase();
+
+  const items = document.querySelectorAll("#productDropdownMenu li.product-item");
+
+  items.forEach((item) => {
+    const text = item.textContent || item.innerText;
+    item.style.display = text.toLowerCase().includes(filter) ? "" : "none";
+  });
+
+  const allListItems = document.querySelectorAll("#productDropdownMenu li");
+
+  allListItems.forEach((li, index) => {
+    const hr = li.querySelector("hr.dropdown-divider");
+    if (hr) {
+      const prev = allListItems[index - 1];
+      const next = allListItems[index + 1];
+
+      const prevHidden = !prev || (prev.classList.contains("product-item") && prev.style.display === "none");
+      const nextHidden = !next || (next.classList.contains("product-item") && next.style.display === "none");
+
+      li.style.display = (prevHidden && nextHidden) ? "none" : "";
+    }
+  });
+}
+
+
+  $(document).ready(function () {
+
+window.selectProduct = function (id, name) {
+  const dropdownButton = document.getElementById("productSearchDropdown");
+  dropdownButton.textContent = name;
+
+  document.getElementById("selectedProductId").value = id;
+
+  const dropdownInstance = bootstrap.Dropdown.getInstance(dropdownButton);
+  if (dropdownInstance) dropdownInstance.hide();
+
+  fetchProductDetails(id);
+};
+
+function fetchProductDetails(productId) {
+  if (!productId) return;
+
+  $.ajax({
+    url: "/get-product-details/" + productId,
+    type: "GET",
+    success: function (response) {
+      if (response.type === "product") {
+        if (response.quantity <= 0) {
+          Swal.fire({ icon: "warning", title: "Out of Stock", text: `The item \"${response.item_name}\" is currently out of stock.`, confirmButtonText: "OK" });
+          return;
+        }
+        addOrUpdateProductRow(response);
+        $("#dealName").text('');
+        $("#dealPrice").text('');
+      } else if (response.type === "deal") {
+        
+        $(".dealitemsection").show();
+        const dealName = response.deal_name;
+        const dealId = dealName.replace(/\s+/g, '-');
+
+        addOrUpdateProductRow({
+          item_name: dealName,
+          single_retail_rate: response.single_retail_rate,
+          single_purchase_rate: response.single_purchase_rate,
+          quantity: response.quantity,
+          type: "deal"
+        });
+
+        $("#dealName").text(dealName);
+        $("#dealPrice").text(response.deal_price);
+
+        let dealGrandTotal = 0;
+        let tbodyId = `deal-items-${dealId}`;
+
+        if (!$(`#${tbodyId}`).length) {
+          $("#dealitemTable").append(`<tbody class="deal-items" data-deal-name="${dealName}" id="${tbodyId}"></tbody>`);
+        }
+
+        const $tbody = $(`#${tbodyId}`);
+
+const allProducts = @json($products); 
+
+response.products.forEach(function (item) {
+  const purchaseRate = parseFloat(item.single_purchase_rate);
+  const retailRate = parseFloat(item.single_retail_rate);
+  const baseQuantity = parseFloat(item.quantity);
+  const itemTotal = purchaseRate * baseQuantity;
+
+  dealGrandTotal += itemTotal;
+
+  const existingRow = $tbody.find(`input[name="deal_product_name[]"][value="${item.products}"]`).closest("tr");
+
+  if (existingRow.length) {
+    const qtyInput = existingRow.find('.deal-item-quantity-input');
+    const oldQty = parseFloat(qtyInput.val()) || 0;
+    const newQty = oldQty + baseQuantity;
+    qtyInput.val(newQty);
+    qtyInput.attr("data-base-quantity", newQty);
+
+    const newItemTotal = purchaseRate * newQty;
+    dealGrandTotal += newItemTotal - itemTotal; 
+  } else {
+    const product = allProducts.find(p => p.item_name === item.products) || { quantity: 0 };
+
+    $tbody.append(`
+      <tr data-stock="${product.quantity}">
+        <td><input type="text" class="form-control form-control-sm" name="deal_name[]" value="${dealName}" readonly></td>
+        <td><input type="text" class="form-control form-control-sm" name="deal_product_name[]" value="${item.products}" readonly></td>
+        <td><input type="number" class="form-control form-control-sm deal-item-quantity-input" name="deal_product_quantity[]" value="${baseQuantity}" readonly min="1" data-base-quantity="${baseQuantity}"></td>
+        <td style="display: none"><input type="number" class="form-control form-control-sm" name="deal_product_purchase_rate[]" readonly value="${purchaseRate.toFixed(2)}" step="0.01" min="0"></td>
+        <td><input type="number" class="form-control form-control-sm" name="deal_product_retail_rate[]" readonly value="${retailRate.toFixed(2)}" step="0.01" min="0"></td>
+      </tr>
+    `);
+  }
+});
+
+
+
+$tbody.find('.deal-total-row').remove(); 
+
+$tbody.append(`
+  <tr class="deal-total-row">
+    <td colspan="2" style="text-align: right;"><strong>Deal Total:</strong></td>
+    <td><input type="number" id="deal-total-value-${dealId}" class="form-control form-control-sm" readonly value="${dealGrandTotal.toFixed(2)}"></td>
+  </tr>
+`);
+updateTotals();
+
+
+     $(document).off('input.dealQty').on('input.dealQty', '.deal-quantity-input', function () {
+  const $this = $(this);
+  const newDealQty = parseInt($this.val()) || 1;
+  const $row = $this.closest('tr');
+  const currentDealName = $(this).closest('tr').find('.item-name-input').val() || '';
+const dealIdScoped = currentDealName.replace(/\s+/g, '-');
+
+
+  let hasInsufficientStock = false;
+  let insufficientProductName = '';
+
+  $('#dealitemTable tbody tr').each(function () {
+    const $dealItemRow = $(this);
+    const dealName = $dealItemRow.find('input[name="deal_name[]"]').val();
+
+    if (dealName === currentDealName) {
+      const $qtyInput = $dealItemRow.find('input[name="deal_product_quantity[]"]');
+      const baseQty = parseInt($qtyInput.attr('data-base-quantity')) || 0;
+      const updatedQty = baseQty * newDealQty;
+
+      const productStock = parseInt($dealItemRow.attr('data-stock')) || 0;
+
+      if (updatedQty > productStock) {
+        hasInsufficientStock = true;
+        insufficientProductName = $dealItemRow.find('input[name="deal_product_name[]"]').val();
+        return false; 
+      }
+
+      $qtyInput.val(updatedQty);
+    }
+  });
+
+  if (hasInsufficientStock) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Insufficient Stock',
+      text: `Not enough stock for "${insufficientProductName}". Please reduce quantity.`,
+    });
+
+    $this.val(1);
+    return; 
+  }
+
+  let newTotal = 0;
+
+  $(`#deal-items-${dealIdScoped} .deal-item-quantity-input`).each(function () {
+    const updatedQty = parseInt($(this).val()) || 0;
+    const itemRate = parseFloat($(this).closest("tr").find('input[name="deal_product_purchase_rate[]"]').val()) || 0;
+    newTotal += updatedQty * itemRate;
+  });
+
+  $(`#deal-total-value-${dealIdScoped}`).val(newTotal.toFixed(2));
+
+  const $dealRow = $("#productTable tbody tr").filter(function () {
+    return $(this).find(".item-name-input").val() === currentDealName;
+  });
+
+  const basePurchaseRate = parseFloat($dealRow.find(".purchase-rate-input").attr("data-base-rate")) || 0;
+  const updatedPurchaseRate = basePurchaseRate * newDealQty;
+  $dealRow.find(".purchase-rate-input").val(updatedPurchaseRate.toFixed(2));
+
+  const retailRate = parseFloat($dealRow.find(".rate-input").val()) || 0;
+  const newSubtotal = newDealQty * retailRate;
+  $dealRow.find(".subtotal-input").val(newSubtotal.toFixed(2));
+
+  updateTotals();
+});
+
+      
+      }
+    },
+    error: function (xhr) {
+      let errMsg = xhr.responseJSON?.message || "An error occurred";
+      Swal.fire({ icon: "error", title: "Error", text: errMsg, confirmButtonText: "OK" });
+    }
+  });
+}
+
+function addOrUpdateProductRow(product) {
+  const itemName = product.item_name || product.products;
+  const quantity = 1;
+  const retailRate = parseFloat(product.single_retail_rate || 0);
+  const purchaseRate = parseFloat(product.single_purchase_rate || 0);
+  const subtotal = quantity * retailRate;
+  const isDeal = product.type === "deal" || product.item_name === product.deal_name;
+
+  const existingRow = $("#productTable tbody tr").filter(function () {
+    return $(this).find(".item-name-input").val() === itemName;
+  });
+
+  if (existingRow.length > 0) {
+    const qtyInputSelector = isDeal ? ".deal-quantity-input" : ".quantity-input";
+    let currentQuantity = parseInt(existingRow.find(qtyInputSelector).val());
+    let newQuantity = currentQuantity + 1;
+
+    if (newQuantity > product.quantity) {
+      Swal.fire({ icon: "warning", title: "Stock Limit Reached", text: `Only ${product.quantity} units available for \"${itemName}\".` });
+      return;
+    }
+
+    existingRow.find(qtyInputSelector).val(newQuantity).attr("data-stock", product.quantity);
+
+    const rate = parseFloat(existingRow.find(".rate-input").val());
+    const newSubtotal = newQuantity * rate;
+    existingRow.find(".subtotal-input").val(newSubtotal.toFixed(2));
+
+    const basePurchaseRate = parseFloat(existingRow.find(".purchase-rate-input").attr("data-base-rate"));
+    const newPurchaseRate = basePurchaseRate * newQuantity;
+    existingRow.find(".purchase-rate-input").val(newPurchaseRate.toFixed(2));
+
+    updateTotals();
+  } else {
+    const quantityInput = isDeal
+      ? `<input type="number" name="deal_quantity[]" class="form-control form-control-sm deal-quantity-input" value="${quantity}" min="1" style="text-align:right;width:60px" data-stock="${product.quantity}">`
+      : `<input type="number" name="product_quantity[]" class="form-control form-control-sm quantity-input" value="${quantity}" min="1" style="text-align:right;width:60px" data-stock="${product.quantity}">`;
+
+    $("#productTable tbody").append(`
+      <tr>
+        <td><input type="text" name="product_name[]" class="form-control form-control-sm item-name-input" value="${itemName}" readonly style="width:150px"></td>
+        <td>${quantityInput}</td>
+        <td style="display: none"><input type="number" name="purchase_rate[]" class="form-control form-control-sm purchase-rate-input" value="${purchaseRate.toFixed(2)}" min="0" step="0.01" style="text-align:right;width:80px" data-base-rate="${purchaseRate.toFixed(2)}"></td>
+        <td><input type="number" name="product_rate[]" class="form-control form-control-sm rate-input" value="${retailRate.toFixed(2)}" min="0" step="0.01" style="text-align:right;width:80px"></td>
+        <td><input type="text" name="product_subtotal[]" class="form-control form-control-sm subtotal-input" value="${subtotal.toFixed(2)}" readonly style="text-align:right;width:100px"></td>
+        <td><button class="btn btn-icon btn-round btn-danger btn-sm delete-row"><i class="fa fa-trash"></i></button></td>
+      </tr>
+    `);
+
+    updateTotals();
+  }
+}
+
+
+$(document).on('click', '.delete-row', function () {
+ 
+    const productRow = $(this).closest('tr');
+    const dealName = productRow.find('input[name="product_name[]"]').val();
+     
+
+    productRow.remove();
+
+    $('#dealitemTable tbody tr').each(function () {
+        const row = $(this);
+        const dealInput = row.find('input[name="deal_name[]"]');
+
+        if (dealInput.length && dealInput.val() === dealName) {
+            row.remove();
+        }
+    });
+});
+
+
+
+
+    $(document).on("keydown", function (e) {
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault();
+        handleSaleFormSubmit();
+      }
+    });
+
+    $("#saleForm").on("submit", function (e) {
+      e.preventDefault();
+      handleSaleFormSubmit();
+    });
+
+    function handleSaleFormSubmit() {
+      const items = [];
+$("#productTable tbody tr").each(function () {
+  const row = $(this);
+  const name = row.find(".item-name-input").val();
+  const isDeal = row.find(".deal-quantity-input").length > 0;
+
+  if (name.trim() !== "") {
+    items.push({
+      product_name: name,
+      product_quantity: !isDeal 
+        ? parseInt(row.find(".quantity-input").val()) || 1 
+        : undefined, 
+      deal_quantity: isDeal 
+        ? parseInt(row.find(".deal-quantity-input").val()) || 1 
+        : undefined, 
+      purchase_rate: parseFloat(row.find(".purchase-rate-input").val()) || 0,
+      product_rate: parseFloat(row.find(".rate-input").val()) || 0,
+      product_subtotal: parseFloat(row.find(".subtotal-input").val()) || 0,
+    });
+  }
+});
+
+
+
+      const customerSelect = document.getElementById("smallSelect");
+      const customerId = customerSelect.value;
+      const customerName = customerSelect.options[customerSelect.selectedIndex].text;
+
+
+const dealProductNames = [];
+const dealProductQuantities = [];
+const dealProductPurchaseRates = [];
+const dealProductRetailRates = [];
+const dealnames = [];
+
+
+$("input[name='deal_product_name[]']").each(function () {
+  dealProductNames.push($(this).val());
+});
+$("input[name='deal_product_quantity[]']").each(function () {
+  dealProductQuantities.push(parseInt($(this).val()) || 0);
+});
+$("input[name='deal_product_purchase_rate[]']").each(function () {
+  dealProductPurchaseRates.push(parseFloat($(this).val()) || 0);
+});
+$("input[name='deal_product_retail_rate[]']").each(function () {
+  dealProductRetailRates.push(parseFloat($(this).val()) || 0);
+});
+$("input[name='deal_name[]']").each(function () {
+  const name = $(this).val();
+  if (name.trim() !== '') {
+    dealnames.push(name);
+  }
+});
+
+      const formData = {
+        employee: document.querySelector('[name="employee"]').value,
+        customer_id: customerId,
+        customer_name: customerName,
+        created_at: document.querySelector('[name="created_at"]').value,
+        ref: document.querySelector('[name="ref"]').value,
+        sale_type: document.querySelector('[name="sale_type"]').value,
+        payment_type: document.querySelector('[name="payment_type"]').value,
+        discount: document.querySelector('[name="discount"]').value,
+        total_items: document.querySelector('[name="total_items"]').value,
+        total: document.querySelector('[name="total"]').value,
+        amount_after_discount: document.querySelector('[name="amount_after_discount"]').value,
+        fixed_discount: document.querySelector('[name="fixed_discount"]').value,
+        amount_after_fix_discount: document.querySelector('[name="amount_after_fix_discount"]').value,
+        subtotal: document.querySelector('[name="subtotal"]').value,
+        items: items,
+
+         deal_product_name: dealProductNames,
+  deal_product_quantity: dealProductQuantities,
+  deal_product_purchase_rate: dealProductPurchaseRates,
+  deal_product_retail_rate: dealProductRetailRates,
+  deal_name: dealnames,
+      };
+
+      fetch("/sales", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+        },
+        body: JSON.stringify(formData),
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error("Network response was not ok");
+          return response.json();
+        })
+        .then((data) => {
+          Swal.fire({
+            title: "Success!",
+            text: "Sale submitted successfully!",
+            icon: "success",
+            confirmButtonText: "OK",
+          }).then((result) => {
+            if (result.isConfirmed) {
+              document.getElementById("saleForm").reset();
+              $("#productTable tbody").empty();
+              updateTotals();
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          Swal.fire({
+            title: "Error!",
+            text: "There was an error submitting the sale.",
+            icon: "error",
+            confirmButtonText: "OK",
+          });
+        });
+    }
+
+    $(document).on("click", ".delete-row", function () {
+      $(this).closest("tr").remove();
+      updateTotals();
+    });
+
+    $(document).on("input", ".quantity-input, .rate-input", function () {
+      const $row = $(this).closest("tr");
+      let quantity = parseInt($row.find(".quantity-input").val()) || 1;
+      let rate = parseFloat($row.find(".rate-input").val()) || 0;
+      let stock = parseInt($row.find(".quantity-input").attr("data-stock")) || 0;
+
+      if (quantity > stock) {
+        Swal.fire({
+          icon: "warning",
+          title: "Stock Limit Reached",
+          text: `Available stock is ${stock}. You cannot exceed this.`,
+        });
+        quantity = stock;
+        $row.find(".quantity-input").val(stock);
+      }
+
+      const subtotal = quantity * rate;
+      $row.find(".subtotal-input").val(subtotal.toFixed(2));
+
+      const basePurchaseRate = parseFloat($row.find(".purchase-rate-input").attr("data-base-rate")) || 0;
+      const newPurchaseRate = basePurchaseRate * quantity;
+      $row.find(".purchase-rate-input").val(newPurchaseRate.toFixed(2));
+
+      updateTotals();
+    });
+
+  function updateTotals() {
+  let totalItems = 0;
+  let totalAmount = 0;
+
+  $('#productTable tbody tr').each(function (index) {
+    const qtyInput = $(this).find('.quantity-input, .deal-quantity-input');
+    const quantity = parseInt(qtyInput.val()) || 0;
+
+    const subtotalRaw = $(this).find('.subtotal-input').val() || '0';
+    const subtotal = parseFloat(subtotalRaw.replace(/,/g, ''));
+
+    console.log(`Row ${index + 1} subtotal:`, subtotal);
+
+    totalItems += quantity; 
+    totalAmount += subtotal;
+  });
+
+
+  $('#totalItems').val(totalItems); 
+  $('#totalAmount').val(totalAmount.toFixed(2));
+
+  const discount = parseFloat($('#discount').val()) || 0;
+  const fixedDiscount = parseFloat($('#fixeddiscount').val()) || 0;
+
+  const amountAfterDiscount = totalAmount - discount;
+  $('#amountafterdiscount').val(amountAfterDiscount.toFixed(2));
+
+  const amountAfterFixDiscount = amountAfterDiscount - fixedDiscount;
+  $('#amountafterfixdiscount').val(amountAfterFixDiscount.toFixed(2));
+
+  $('#total').val(amountAfterFixDiscount.toFixed(2));
+}
+
+  });
+
+
+  $('#discount').on('input', function () {
+  updateTotals();
+});
+
+</script>
+
+
+  </body>
+</html>
