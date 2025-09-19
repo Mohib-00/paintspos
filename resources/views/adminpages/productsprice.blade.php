@@ -215,7 +215,7 @@
     <input type="text" class="form-control" style="width: 80px; background-color: #f0f0f0;font-weight:bolder" 
         data-id="{{ $product->id }}" 
         data-column="retail_rate" 
-        value="{{ $product->single_retail_rate *  $product->quantity}}" 
+        value="{{ $product->single_retail_rate * $product->quantity}}" 
         readonly>
 </td>
 
